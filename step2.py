@@ -2,7 +2,9 @@ import streamlit as st
 import openai
 
 # Set your OpenAI API key
-openai.api_key = "your-openai-api-key"
+from secrets import api_key
+
+openai.api_key = api_key
 
 st.title("Learn How to Use ChatGPT")
 st.write("Let's learn how to write effective prompts!")

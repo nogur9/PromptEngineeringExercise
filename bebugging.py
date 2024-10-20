@@ -1,7 +1,5 @@
 import openai
 
-from _secrets import api_key
-
 openai.api_key = api_key
 
 response = openai.ChatCompletion.create(
