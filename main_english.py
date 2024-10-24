@@ -1,10 +1,9 @@
 import streamlit as st
 import openai
-from typing import List
 import re
 
 # Set your OpenAI API key
-openai.api_key = "Your-key"
+openai.api_key = "Your_key"
 
 ### get vars
 
@@ -38,9 +37,9 @@ def test_if_prompt_good_enough(user_prompt, ai_response):
 def evaluate_prompt_with_heuristics(prompt):
     """Evaluates the quality of the prompt."""
     if len(prompt.split(" ")) < 3:
-        return "The prompt is too short and written like a Google search. Try to rewrite it with more details or a specific question."
-    elif "cat breeds" not in prompt.lower():
-        return "The prompt could be more specific. Try asking for differences between specific breeds or details about their characteristics."
+        return "The prompt is too short and written like a Google search."
+    elif ("cat" not in prompt.lower()) and ("breed" not in prompt):
+        return "The prompt isn't containing relevant information."
     elif len(prompt.split(" ")) > 300:
         return "prompt too long"
     else:
@@ -148,6 +147,21 @@ def screen_1():
                 prompt_is_good_enough = test_if_prompt_good_enough(user_prompt, ai_response)
                 if prompt_is_good_enough:
                     st.session_state.screen_num = 2
+                    try:
+                        response = openai.ChatCompletion.create(
+                            model="gpt-3.5-turbo",  # Ensure the model is correct
+                            messages=[
+                                {"role": "user", "content": st.session_state.user_prompt}
+                            ],
+                            max_tokens=150,
+                            temperature=0.7,
+                        )
+                        # Extract and display the AI's response
+                        ai_response = response['choices'][0]['message']['content'].strip()
+                        st.session_state.ai_response = ai_response
+                    except Exception as e:
+                        st.error(f"Invalid request error: {e}")
+
                     st.rerun()
 
             except Exception as e:
@@ -158,30 +172,17 @@ def screen_1():
 
 
 def screen_2():
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Ensure the model is correct
-            messages=[
-                {"role": "user", "content": st.session_state.user_prompt}
-            ],
-            max_tokens=150,
-            temperature=0.7,
-        )
-        # Extract and display the AI's response
-        ai_response = response['choices'][0]['message']['content'].strip()
-        st.write("### AI Response:")
-        st.write(ai_response)
+    st.write("### AI Response:")
+    st.write(st.session_state.ai_response)
 
-    except Exception as e:
-        st.error(f"Invalid request error: {e}")
-
-    cat_breed_choices = get_cat_breeds_list(ai_response)
+    cat_breed_choices = get_cat_breeds_list(st.session_state.ai_response)
 
     option = st.selectbox(
         "Select the chosen cat breed:",
         eval(cat_breed_choices))
 
     if st.button("Next"):
+        print(f"{option = }")
         st.session_state.chosen_cat_breed = option
         st.session_state.screen_num = 3
         st.rerun()
