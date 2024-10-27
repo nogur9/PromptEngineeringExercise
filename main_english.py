@@ -4,9 +4,9 @@ import re
 
 # Set your OpenAI API key
 openai.api_key = "Your_key"
-
-### get vars
-
+MODEL_NAME = "gpt-3.5-turbo"
+MAX_TOKENS = 150
+IMAGE_SIZE = "1024x1024"
 
 st.title("AI Prompt App")
 # Input prompt from the user
@@ -24,6 +24,23 @@ def create_image(prompt:str):
     # Get the URL of the generated image
     image_url = response['data'][0]['url']
     st.write("Generated Image URL:", image_url)
+
+
+
+def get_ai_feedback(prompt: str) -> str:
+    """Gets feedback from the AI model."""
+
+    try:
+        response = openai.ChatCompletion.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=MAX_TOKENS,
+            temperature=0.7,
+        )
+        return response['choices'][0]['message']['content'].strip()
+    except Exception as e:
+        st.error(f"AI Feedback error: {e}")
+        return ""
 
 
 def test_if_prompt_good_enough(user_prompt, ai_response):
@@ -64,26 +81,12 @@ def get_cat_breeds_list(text: str):
         "
         """
 
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Ensure the model is correct
-            messages=[
-                {"role": "user", "content": extraction_prompt}
-            ],
-            max_tokens=150,
-            temperature=0.7,
-        )
-        # Extract and display the AI's response
-        ai_response = response['choices'][0]['message']['content'].strip()
-
-        match = re.search(regex, ai_response)
-        if match:
-            cat_breeds_list = match.group(1)
-            print(cat_breeds_list)
-            return cat_breeds_list
-    except Exception as e:
-        st.error(f"Invalid request error: {e}")
-
+    ai_response = get_ai_feedback(extraction_prompt)
+    match = re.search(regex, ai_response)
+    if match:
+        cat_breeds_list = match.group(1)
+        print(cat_breeds_list)
+        return cat_breeds_list
 
 def screen_1():
     user_prompt = st.text_area("Enter your prompt:")
@@ -131,44 +134,20 @@ def screen_1():
         # if the prompt passes heuristics
         else:
             # Call the OpenAI API to get the response
-            try:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",  # Ensure the model is correct
-                    messages=[
-                        {"role": "user", "content": evaluation_prompt}
-                    ],
-                    max_tokens=150,
-                    temperature=0.7,
-                )
+
+            # Extract and display the AI's response
+            ai_response = get_ai_feedback(evaluation_prompt)
+            st.write("### AI Response:")
+            st.write(ai_response)
+            prompt_is_good_enough = test_if_prompt_good_enough(user_prompt, ai_response)
+            if prompt_is_good_enough:
+                st.session_state.screen_num = 2
+
                 # Extract and display the AI's response
-                ai_response = response['choices'][0]['message']['content'].strip()
-                st.write("### AI Response:")
-                st.write(ai_response)
-                prompt_is_good_enough = test_if_prompt_good_enough(user_prompt, ai_response)
-                if prompt_is_good_enough:
-                    st.session_state.screen_num = 2
-                    try:
-                        response = openai.ChatCompletion.create(
-                            model="gpt-3.5-turbo",  # Ensure the model is correct
-                            messages=[
-                                {"role": "user", "content": st.session_state.user_prompt}
-                            ],
-                            max_tokens=150,
-                            temperature=0.7,
-                        )
-                        # Extract and display the AI's response
-                        ai_response = response['choices'][0]['message']['content'].strip()
-                        st.session_state.ai_response = ai_response
-                    except Exception as e:
-                        st.error(f"Invalid request error: {e}")
+                ai_response = get_ai_feedback(st.session_state.user_prompt)
+                st.session_state.ai_response = ai_response
+                st.rerun()
 
-                    st.rerun()
-
-            except Exception as e:
-                st.error(f"Invalid request error: {e}")
-
-            else:
-                st.warning("Please enter a prompt.")
 
 
 def screen_2():
